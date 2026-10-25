@@ -1,0 +1,56 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<div class="pharmacy-landing">
+    <nav class="landing-nav" aria-label="Landing navigation">
+        <a class="landing-logo" href="/" aria-label="MyPharmacy home">
+            <span class="landing-logo-mark"><i class="fa-solid fa-plus"></i></span>
+            <span>MyPharmacy</span>
+        </a>
+        <div class="landing-nav-links" aria-hidden="true">
+            <span>Care made simple</span>
+            <span>Trusted inventory</span>
+        </div>
+        <button class="landing-login-link" @onclick="GoToLogin">Sign in <i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+    </nav>
+
+    <main class="landing-hero">
+        <section class="landing-copy">
+            <span class="landing-kicker"><i class="fa-solid fa-sparkles"></i> Your digital pharmacy desk</span>
+            <h1>Healthier workdays<br /><em>start here.</em></h1>
+            <p>One calm, capable space for patients, prescriptions, medication stock, and the people who make care happen.</p>
+            <div class="landing-actions">
+                <button class="landing-cta" @onclick="GoToLogin">Open your workspace <i class="fa-solid fa-arrow-right"></i></button>
+                <span class="landing-note"><i class="fa-solid fa-shield-heart"></i> Secure pharmacy access</span>
+            </div>
+            <div class="landing-proof">
+                <div><strong>Stock-aware</strong><span>prescribing</span></div>
+                <div><strong>One workspace</strong><span>for your team</span></div>
+                <div><strong>Clear records</strong><span>at a glance</span></div>
+            </div>
+        </section>
+
+        <section class="landing-visual" aria-label="Pharmacist at work">
+            <div class="visual-orbit orbit-one"></div>
+            <div class="visual-orbit orbit-two"></div>
+            <div class="visual-image-frame">
+                <img src="images/pharmacist-assisting-customer-pharmacy.jpg" alt="Pharmacist helping a customer" />
+            </div>
+            <div class="visual-status-card">
+                <span class="status-icon"><i class="fa-solid fa-circle-check"></i></span>
+                <div><small>Today’s workflow</small><strong>Ready for care</strong></div>
+            </div>
+            <div class="visual-pill-card"><i class="fa-solid fa-capsules"></i><span>Medication<br /><strong>clarity</strong></span></div>
+        </section>
+    </main>
+
+    <footer class="landing-footer">
+        <span>Made for considered pharmacy care</span>
+        <span><i class="fa-solid fa-lock"></i> Private by design</span>
+        <span><i class="fa-solid fa-heart-pulse"></i> Built around people</span>
+    </footer>
+</div>
+
+@code {
+    private void GoToLogin() => Navigation.NavigateTo("/login");
+}

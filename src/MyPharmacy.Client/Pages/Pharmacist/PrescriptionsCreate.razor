@@ -1,0 +1,98 @@
+@page "/prescriptions/create"
+@using MyPharmacy.Client.Models.Prescriptions
+@using MyPharmacy.Client.Services
+@inject PrescriptionService PrescriptionService
+@inject NavigationManager Navigation
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">Prescription desk</span>
+        <h2>Create Prescription</h2>
+    </div>
+</div>
+
+<EditForm Model="model" OnValidSubmit="Save" class="prescription-form card p-4">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label>Patient ID</label>
+        <InputNumber class="form-control"
+                     @bind-Value="model.PatientID" />
+    </div>
+
+    <div class="mb-3">
+        <label>Notes</label>
+        <InputTextArea class="form-control"
+                       @bind-Value="model.Notes" />
+    </div>
+
+    <h5>Medications</h5>
+
+    @foreach (var item in model.Items)
+    {
+        <div class="row mb-2">
+            <div class="col-4">
+                <InputNumber class="form-control"
+                             placeholder="Medication ID"
+                             @bind-Value="item.MedicationID" />
+            </div>
+            <div class="col-4">
+                <InputNumber class="form-control"
+                             placeholder="Quantity"
+                             @bind-Value="item.Quantity" />
+            </div>
+            <div class="col-4">
+                <button type="button"
+                        class="btn btn-danger"
+                        @onclick="() => RemoveItem(item)">
+                    <i class="fa-solid fa-xmark"></i>
+                    Remove
+                </button>
+            </div>
+        </div>
+    }
+
+    <button type="button"
+            class="btn btn-secondary mb-3"
+            @onclick="AddItem">
+        <i class="fa-solid fa-plus"></i>
+        Add Medication
+    </button>
+
+    <br />
+
+    <button type="submit" class="btn btn-success">
+        <i class="fa-solid fa-check"></i>
+        Save Prescription
+    </button>
+    <button type="button"
+            class="btn btn-secondary ms-2"
+            @onclick="Cancel">
+        Cancel
+    </button>
+</EditForm>
+
+@code {
+    private PrescriptionCreateDto model = new();
+
+    protected override void OnInitialized()
+    {
+        AddItem();
+    }
+
+    void AddItem()
+        => model.Items.Add(new PrescriptionItemCreateDto { Quantity = 1 });
+
+    void RemoveItem(PrescriptionItemCreateDto item)
+        => model.Items.Remove(item);
+
+    async Task Save()
+    {
+        await PrescriptionService.CreateAsync(model);
+        Navigation.NavigateTo("/prescriptions");
+    }
+
+    void Cancel()
+        => Navigation.NavigateTo("/prescriptions");
+}

@@ -1,0 +1,155 @@
+@page "/prescriptions/edit/{Id:int}"
+@using MyPharmacy.Client.Models.Prescriptions
+@using MyPharmacy.Client.Services
+@inject PrescriptionService PrescriptionService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">Prescription desk</span>
+        <h2>Edit Prescription</h2>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-panel">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading prescription...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (editPrescription == null)
+{
+    <p>Prescription not found.</p>
+}
+else
+{
+    <EditForm Model="editPrescription" OnValidSubmit="HandleUpdate" class="card p-4 prescription-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Patient ID</label>
+            <InputNumber class="form-control" @bind-Value="editPrescription.PatientID" />
+        </div>
+
+        <div class="mb-3">
+            <label>Notes</label>
+            <InputText class="form-control" @bind-Value="editPrescription.Notes" />
+        </div>
+
+        <h5>Medications</h5>
+        @foreach (var item in editPrescription.Items)
+        {
+            <div class="mb-2">
+                <label>Medication ID:</label>
+                <InputNumber class="form-control" style="width:150px; display:inline-block; margin-right:10px;"
+                             @bind-Value="item.MedicationID" />
+
+                <label>Quantity:</label>
+                <InputNumber class="form-control" style="width:100px; display:inline-block; margin-right:10px;"
+                             @bind-Value="item.Quantity" />
+
+                <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveItem(item)">
+                    <i class="fa-solid fa-xmark"></i>
+                    Remove
+                </button>
+            </div>
+        }
+
+        <button type="button" class="btn btn-secondary mb-3" @onclick="AddItem">
+            <i class="fa-solid fa-plus"></i>
+            Add Item
+        </button>
+        <br />
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i>
+            Save Changes
+        </button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEdit">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PrescriptionCreateDto editPrescription = new PrescriptionCreateDto();
+    private bool isLoading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPrescription();
+    }
+
+    private async Task LoadPrescription()
+    {
+        isLoading = true;
+        try
+        {
+            var prescription = await PrescriptionService.GetByIdAsync(Id);
+            if (prescription != null)
+            {
+                editPrescription = new PrescriptionCreateDto
+                {
+                    PatientID = prescription.PatientID,
+                    Notes = prescription.Notes ?? "",
+                    Items = prescription.Items.Select(i => new PrescriptionItemCreateDto
+                    {
+                        MedicationID = i.MedicationID,
+                        Quantity = i.Quantity
+                    }).ToList()
+                };
+            }
+            else
+            {
+                error = "Prescription not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Error loading prescription: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddItem()
+    {
+        editPrescription.Items.Add(new PrescriptionItemCreateDto { MedicationID = 1, Quantity = 1 });
+    }
+
+    private void RemoveItem(PrescriptionItemCreateDto item)
+    {
+        editPrescription.Items.Remove(item);
+    }
+
+    private async Task HandleUpdate()
+    {
+        try
+        {
+            bool success = await PrescriptionService.UpdateAsync(Id, editPrescription);
+            if (success)
+                Navigation.NavigateTo($"/prescriptions/{Id}");
+            else
+                error = "Update failed.";
+        }
+        catch (Exception ex)
+        {
+            error = $"Update failed: {ex.Message}";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        Navigation.NavigateTo("/prescriptions");
+    }
+}

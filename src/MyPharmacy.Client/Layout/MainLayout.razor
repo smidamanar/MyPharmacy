@@ -1,0 +1,121 @@
+@using MyPharmacy.Client.Services
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+@inject CustomAuthStateProvider AuthStateProvider
+
+@{
+    var hideNavbar =
+        Navigation.Uri.EndsWith("/") ||
+        Navigation.Uri.EndsWith("/login") ||
+        Navigation.Uri.EndsWith("/register");
+}
+
+<div class="min-vh-100 app-shell">
+
+    @if (!hideNavbar)
+    {
+        <nav class="navbar navbar-expand-lg fixed-top app-navbar">
+
+            <div class="container-fluid">
+
+                <a class="navbar-brand app-brand" href="/dashboard">
+                    <span class="brand-mark">
+                        <img src="images/Logo.png" alt="MyPharmacy" />
+                    </span>
+                    <span>
+                        <span class="brand-title">MyPharmacy</span>
+                        <span class="brand-subtitle">Care console</span>
+                    </span>
+                </a>
+
+                <button class="navbar-toggler app-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbar">
+
+                    <ul class="navbar-nav me-auto app-nav">
+
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/admin">
+                                <i class="fa-solid fa-user-doctor"></i>
+                                <span>Pharmacists</span>
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/patients">
+                                <i class="fa-solid fa-bed-pulse"></i>
+                                <span>Patients</span>
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/prescriptions">
+                                <i class="fa-solid fa-file-prescription"></i>
+                                <span>Prescriptions</span>
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/medications">
+                                <i class="fa-solid fa-capsules"></i>
+                                <span>Medications</span>
+                            </NavLink>
+                        </li>
+
+                    </ul>
+
+                    <ul class="navbar-nav app-nav app-nav-actions">
+
+                        <li class="nav-item me-2">
+                            <NavLink class="btn btn-primary app-create-btn" href="/prescriptions/create">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Prescription</span>
+                            </NavLink>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle account-toggle" data-bs-toggle="dropdown" role="button">
+                                <i class="fa-regular fa-circle-user"></i>
+                                <span>Account</span>
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <NavLink class="dropdown-item" href="/profile">
+                                        Profile
+                                    </NavLink>
+                                </li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li>
+                                    <button class="dropdown-item text-danger" @onclick="Logout">
+                                        Logout
+                                    </button>
+                                </li>
+                            </ul>
+                        </li>
+
+                    </ul>
+
+                </div>
+            </div>
+        </nav>
+    }
+
+    <main class="container-fluid app-main @(hideNavbar ? "app-main-fullscreen" : "")">
+        @Body
+    </main>
+
+</div>
+
+@code {
+    private async Task Logout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        AuthStateProvider.NotifyUserLogout();
+        Navigation.NavigateTo("/login", true);
+    }
+}

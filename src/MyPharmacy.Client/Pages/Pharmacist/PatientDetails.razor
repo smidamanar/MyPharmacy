@@ -1,0 +1,167 @@
+@page "/patients/details/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using MyPharmacy.Client.Models.Patients
+@using MyPharmacy.Client.Services
+@using System.Security.Claims
+@inject PatientService PatientService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">Patient record</span>
+        <h2>Patient Details</h2>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick='() => Navigation.NavigateTo("/patients")'>
+        <i class="fa-solid fa-arrow-left"></i>
+        Back to patients
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (patient == null)
+{
+    <p>Loading patient...</p>
+}
+else if (isEditing)
+{
+    <EditForm Model="editingPatient" OnValidSubmit="HandleEdit" class="card p-4 record-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label>Full Name</label>
+            <InputText class="form-control" @bind-Value="editingPatient.FullName" />
+        </div>
+        <div class="mb-2">
+            <label>National ID</label>
+            <InputText class="form-control" @bind-Value="editingPatient.NationalId" />
+        </div>
+        <div class="mb-2">
+            <label>Birth Date</label>
+            <InputDate class="form-control" @bind-Value="editingPatient.BirthDate" />
+        </div>
+        <div class="mb-2">
+            <label>Address</label>
+            <InputText class="form-control" @bind-Value="editingPatient.Address" />
+        </div>
+
+        <button type="submit" class="btn btn-warning me-2">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+    </EditForm>
+}
+else
+{
+    <div class="card p-4 record-card">
+        <div class="record-avatar"><i class="fa-solid fa-user-injured"></i></div>
+        <div class="record-grid">
+            <p><span>ID</span><strong>@patient.PatientID</strong></p>
+            <p><span>Full Name</span><strong>@patient.FullName</strong></p>
+            <p><span>National ID</span><strong>@patient.NationalId</strong></p>
+            <p><span>Birth Date</span><strong>@patient.BirthDate.ToShortDateString()</strong></p>
+            <p><span>Address</span><strong>@patient.Address</strong></p>
+        </div>
+
+        @if (CanEdit)
+        {
+            <button class="btn btn-warning" @onclick="EnableEdit">
+                <i class="fa-solid fa-pen"></i>
+                Edit
+            </button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private PatientReadDto? patient;
+    private PatientCreateDto editingPatient = new PatientCreateDto();
+    private bool isEditing = false;
+    private string? errorMessage;
+
+    private int currentUserId;
+    private bool IsAdmin;
+    private bool IsPharmacist;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserInfo();
+        await LoadPatient();
+    }
+
+    private async Task GetCurrentUserInfo()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(idClaim) && int.TryParse(idClaim, out var id))
+            {
+                currentUserId = id;
+            }
+
+            IsAdmin = user.IsInRole("Admin");
+            IsPharmacist = user.IsInRole("Pharmacist");
+        }
+    }
+
+    private async Task LoadPatient()
+    {
+        try
+        {
+            patient = await PatientService.GetByIdAsync(Id);
+        }
+        catch
+        {
+            errorMessage = "Error loading patient.";
+        }
+    }
+
+    private bool CanEdit => patient != null && (IsAdmin || IsPharmacist);
+
+    private void EnableEdit()
+    {
+        if (patient != null)
+        {
+            editingPatient = new PatientCreateDto
+            {
+                FullName = patient.FullName,
+                NationalId = patient.NationalId,
+                BirthDate = patient.BirthDate,
+                Address = patient.Address ?? string.Empty
+            };
+            isEditing = true;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        editingPatient = new PatientCreateDto();
+    }
+
+    private async Task HandleEdit()
+    {
+        if (patient == null) return;
+
+        var success = await PatientService.UpdateAsync(patient.PatientID, editingPatient);
+        if (success)
+        {
+            await LoadPatient();
+            isEditing = false;
+        }
+        else
+        {
+            errorMessage = "Update failed. Check console/server logs.";
+        }
+    }
+}

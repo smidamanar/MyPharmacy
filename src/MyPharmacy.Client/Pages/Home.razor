@@ -1,0 +1,11 @@
+@inject HttpClient Http
+
+<button @onclick="TestApi">Test API</button>
+
+@code {
+    async Task TestApi()
+    {
+        var result = await Http.GetStringAsync("api/pharmacist");
+        Console.WriteLine(result);
+    }
+}

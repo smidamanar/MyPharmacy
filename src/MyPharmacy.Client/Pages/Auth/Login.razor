@@ -1,0 +1,83 @@
+@page "/login"
+@using System.IdentityModel.Tokens.Jwt
+@using System.Security.Claims
+@using Blazored.LocalStorage
+@using MyPharmacy.Client.Models.Auth
+@using MyPharmacy.Client.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject CustomAuthStateProvider AuthStateProvider
+@using MyPharmacy.Client.Shared
+@layout FullscreenLayout
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-brand">
+            <span class="login-mark"><i class="fa-solid fa-prescription-bottle-medical"></i></span>
+            <div>
+                <h1>Welcome Back</h1>
+                <p>Sign in to continue your pharmacy workflow.</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="alert alert-danger">@error</div>
+        }
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="loginModel.Email" placeholder="admin@mail.com" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Your password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                Login
+            </button>
+        </EditForm>
+
+
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private string? error;
+
+    private async Task HandleLogin()
+    {
+        error = null;
+
+        var token = await AuthService.LoginAsync(loginModel);
+
+        if (string.IsNullOrEmpty(token))
+        {
+            error = "Invalid email or password";
+            return;
+        }
+
+        await LocalStorage.SetItemAsStringAsync("authToken", token);
+        AuthStateProvider.NotifyUserAuthentication(token);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+        var role = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+        if (role == "Admin")
+            Navigation.NavigateTo("/dashboard");
+        else if (role == "Pharmacist")
+            Navigation.NavigateTo("/dashboard");
+        else
+            Navigation.NavigateTo("/");
+    }
+}

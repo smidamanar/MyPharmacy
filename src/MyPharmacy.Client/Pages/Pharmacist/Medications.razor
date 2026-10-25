@@ -1,0 +1,212 @@
+@page "/medications"
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using MyPharmacy.Client.Models.Medications
+@using MyPharmacy.Client.Services
+@inject MedicationService MedicationService
+@inject IJSRuntime JS
+@inject ILocalStorageService LocalStorage
+@attribute [Authorize]
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">Inventory</span>
+        <h2>Medications</h2>
+    </div>
+
+@if (userRole == "Admin")
+{
+    <button class="btn btn-primary" @onclick="ShowCreateForm">
+        <i class="fa-solid fa-plus"></i>
+        Add Medication
+    </button>
+}
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if ((isCreating || isEditing) && userRole == "Admin")
+{
+    <EditForm Model="currentMedication" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="card p-4 mb-4">
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <InputText class="form-control" @bind-Value="currentMedication.Name" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <InputText class="form-control" @bind-Value="currentMedication.Description" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <InputNumber class="form-control" @bind-Value="currentMedication.StockQuantity" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Price (DT)</label>
+                <InputNumber class="form-control" @bind-Value="currentMedication.Price" />
+            </div>
+
+            <button type="submit" class="btn btn-success me-2">Save</button>
+            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+        </div>
+    </EditForm>
+}
+
+@if (medications == null)
+{
+    <p>Loading medications...</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Price</th>
+                @if (userRole == "Admin")
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in medications)
+            {
+                <tr>
+                    <td>@m.MedicationID</td>
+                    <td>@m.Name</td>
+                    <td>@m.Description</td>
+                    <td>@m.StockQuantity</td>
+                    <td>@m.Price DT</td>
+                    @if (userRole == "Admin")
+                    {
+                        <td>
+                            <button class="btn btn-warning btn-sm me-1" @onclick="() => StartEdit(m)">
+                                <i class="fa-solid fa-pen"></i>
+                                Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteMedication(m.MedicationID)">
+                                <i class="fa-solid fa-trash"></i>
+                                Delete
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<MedicationReadDto>? medications;
+    private MedicationCreateDto currentMedication = new();
+    private int currentMedicationId;
+    private bool isCreating;
+    private bool isEditing;
+    private string? errorMessage;
+    private string userRole = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserRole();
+        await LoadMedications();
+    }
+
+    private async Task GetUserRole()
+    {
+        var token = await LocalStorage.GetItemAsStringAsync("authToken");
+        if (!string.IsNullOrEmpty(token))
+        {
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(token);
+            userRole = jwt.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+        }
+    }
+
+    private async Task LoadMedications()
+    {
+        try
+        {
+            medications = await MedicationService.GetAllAsync();
+        }
+        catch
+        {
+            errorMessage = "Failed to load medications.";
+        }
+    }
+
+    private void ShowCreateForm()
+    {
+        currentMedication = new MedicationCreateDto();
+        isCreating = true;
+        isEditing = false;
+        errorMessage = null;
+    }
+
+    private void StartEdit(MedicationReadDto m)
+    {
+        currentMedication = new MedicationCreateDto
+        {
+            Name = m.Name,
+            Description = m.Description,
+            StockQuantity = m.StockQuantity,
+            Price = m.Price
+        };
+        currentMedicationId = m.MedicationID;
+        isEditing = true;
+        isCreating = false;
+        errorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        isCreating = false;
+        isEditing = false;
+        currentMedication = new MedicationCreateDto();
+        currentMedicationId = 0;
+        errorMessage = null;
+    }
+
+    private async Task HandleSubmit()
+    {
+        bool success;
+        if (isCreating)
+            success = await MedicationService.CreateAsync(currentMedication);
+        else
+            success = await MedicationService.UpdateAsync(currentMedicationId, currentMedication);
+
+        if (success)
+        {
+            await LoadMedications();
+            CancelEdit();
+        }
+        else
+        {
+            errorMessage = "Operation failed.";
+        }
+    }
+
+    private async Task DeleteMedication(int id)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this medication?");
+        if (!confirm) return;
+
+        var success = await MedicationService.DeleteAsync(id);
+        if (success)
+            await LoadMedications();
+        else
+            errorMessage = "Delete failed.";
+    }
+}

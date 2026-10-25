@@ -1,0 +1,145 @@
+@page "/prescriptions"
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using MyPharmacy.Client.Models.Prescriptions
+@using MyPharmacy.Client.Services
+@inject PrescriptionService PrescriptionService
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject IJSRuntime JS
+@attribute [Authorize]
+
+<div class="container my-4 work-page">
+    <div class="page-heading">
+        <div>
+            <span class="eyebrow">Prescription flow</span>
+            <h2>Prescriptions</h2>
+        </div>
+
+    @if (IsAdmin || IsPharmacist)
+    {
+        <button class="btn btn-primary" @onclick="GoCreate">
+            <i class="fa-solid fa-file-circle-plus"></i>
+            Add Prescription
+        </button>
+    }
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Date</th>
+                    <th>Pharmacist</th>
+                    @if (IsAdmin || IsPharmacist)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (prescriptions == null || prescriptions.Count == 0)
+                {
+                    <tr>
+                        <td colspan="@(IsAdmin || IsPharmacist ? 5 : 4)" class="text-center">
+                            Loading prescriptions...
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var p in prescriptions)
+                    {
+                        <tr>
+                            <td>@p.PrescriptionID</td>
+                            <td>@p.PatientName</td>
+                            <td>@p.Date.ToShortDateString()</td>
+                            <td>@p.PharmacistName</td>
+
+                            @if (IsAdmin || IsPharmacist)
+                            {
+                                <td>
+                                    <button class="btn btn-sm btn-info me-1" @onclick="() => View(p.PrescriptionID)">
+                                        <i class="bi bi-eye"></i> Details
+                                    </button>
+
+                                    @if (IsAdmin)
+                                    {
+                                        <button class="btn btn-sm btn-danger" @onclick="() => Delete(p.PrescriptionID)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<PrescriptionReadDto> prescriptions = new();
+    private string? errorMessage;
+
+    private bool IsAdmin = false;
+    private bool IsPharmacist = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserRole();
+        await LoadPrescriptions();
+    }
+
+    private async Task GetUserRole()
+    {
+        var token = await LocalStorage.GetItemAsStringAsync("authToken");
+        if (!string.IsNullOrEmpty(token))
+        {
+            var jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
+                .ReadJwtToken(token);
+
+            IsAdmin = jwt.Claims.Any(c =>
+                c.Type == System.Security.Claims.ClaimTypes.Role && c.Value == "Admin");
+
+            IsPharmacist = jwt.Claims.Any(c =>
+                c.Type == System.Security.Claims.ClaimTypes.Role && c.Value == "Pharmacist");
+        }
+    }
+
+    private async Task LoadPrescriptions()
+    {
+        try
+        {
+            prescriptions = await PrescriptionService.GetAllAsync();
+        }
+        catch
+        {
+            errorMessage = "Failed to load prescriptions.";
+        }
+    }
+
+    private void GoCreate() => Navigation.NavigateTo("/prescriptions/create");
+
+    private void View(int id) => Navigation.NavigateTo($"/prescriptions/{id}");
+
+    private async Task Delete(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete prescription {id}?");
+        if (!confirmed) return;
+
+        var success = await PrescriptionService.DeleteAsync(id);
+        if (success)
+            await LoadPrescriptions();
+        else
+            errorMessage = "Delete failed. Check server logs.";
+    }
+}

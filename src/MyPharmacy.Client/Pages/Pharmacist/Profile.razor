@@ -1,0 +1,94 @@
+@page "/profile"
+@using Blazored.LocalStorage
+@using MyPharmacy.Client.Models.Pharmacists
+@using MyPharmacy.Client.Services
+@inject PharmacistProfileService ProfileService
+@inject IJSRuntime JS
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">Account</span>
+        <h2>My Profile</h2>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-panel">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading profile...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <EditForm Model="profile" OnValidSubmit="SaveProfile" class="card p-4 record-form">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Full Name</label>
+            <InputText class="form-control" @bind-Value="profile.FullName" />
+        </div>
+
+        <div class="mb-3">
+            <label>Email</label>
+            <InputText class="form-control" @bind-Value="profile.Email" Disabled="true" />
+        </div>
+
+        <div class="mb-3">
+            <label>Address</label>
+            <InputText class="form-control" @bind-Value="profile.Address" />
+        </div>
+
+        <div class="mb-3">
+            <label>Phone</label>
+            <InputText class="form-control" @bind-Value="profile.Phone" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Save
+        </button>
+    </EditForm>
+}
+
+@code {
+    private PharmacistProfileDto profile = new();
+    private bool isLoading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ProfileService.GetProfileAsync();
+            if (result != null)
+                profile = result;
+            else
+                error = "Failed to load profile.";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        var success = await ProfileService.UpdateProfileAsync(profile);
+        if (success)
+            await JS.InvokeVoidAsync("alert", "Profile updated successfully!");
+        else
+            await JS.InvokeVoidAsync("alert", "Failed to update profile.");
+    }
+}

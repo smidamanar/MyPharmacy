@@ -1,0 +1,203 @@
+@page "/patients"
+@using Microsoft.AspNetCore.Authorization
+@using MyPharmacy.Client.Models.Patients
+@using MyPharmacy.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject PatientService PatientService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<div class="container my-4 work-page">
+    <div class="page-heading">
+        <div>
+            <span class="eyebrow">Patient care</span>
+            <h2>Patients</h2>
+        </div>
+
+    @if (userRole == "Admin" || userRole == "Pharmacist")
+    {
+        <button class="btn btn-primary" @onclick="ShowCreateForm">
+            <i class="fa-solid fa-user-plus"></i>
+            Add Patient
+        </button>
+    }
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (isCreating)
+    {
+        <div class="card mb-3 shadow-sm">
+            <div class="card-header bg-success text-white">Create Patient</div>
+            <div class="card-body">
+                <EditForm Model="newPatient" OnValidSubmit="HandleCreate">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-2">
+                        <label>Full Name</label>
+                        <InputText class="form-control" @bind-Value="newPatient.FullName" />
+                    </div>
+                    <div class="mb-2">
+                        <label>National ID</label>
+                        <InputText class="form-control" @bind-Value="newPatient.NationalId" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Birth Date</label>
+                        <InputDate class="form-control" @bind-Value="newPatient.BirthDate" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Address</label>
+                        <InputText class="form-control" @bind-Value="newPatient.Address" />
+                    </div>
+
+                    <button type="submit" class="btn btn-success me-2">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>National ID</th>
+                    <th>Birth Date</th>
+                    <th>Address</th>
+                    @if (userRole == "Admin" || userRole == "Pharmacist")
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (patients == null)
+                {
+                    <tr><td colspan="6" class="text-center">Loading patients...</td></tr>
+                }
+                else
+                {
+                    @foreach (var p in patients)
+                    {
+                        <tr>
+                            <td>@p.PatientID</td>
+                            <td>@p.FullName</td>
+                            <td>@p.NationalId</td>
+                            <td>@p.BirthDate.ToShortDateString()</td>
+                            <td>@p.Address</td>
+                            @if (userRole == "Admin" || userRole == "Pharmacist")
+                            {
+                                <td>
+                                    <button class="btn btn-sm btn-info me-1" @onclick="() => NavigateToDetails(p.PatientID)">
+                                        <i class="bi bi-eye"></i> Details
+                                    </button>
+                                    @if (userRole == "Admin")
+                                    {
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeletePatient(p.PatientID)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<PatientReadDto>? patients;
+    private PatientCreateDto newPatient = new PatientCreateDto();
+    private bool isCreating = false;
+    private string? errorMessage;
+
+    private string userRole = "";
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserInfo();
+        await LoadPatients();
+    }
+
+    private async Task GetUserInfo()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            userRole = user.IsInRole("Admin") ? "Admin" : "Pharmacist";
+            var nameId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(nameId))
+                userId = int.Parse(nameId);
+        }
+    }
+
+    private async Task LoadPatients()
+    {
+        try
+        {
+            patients = await PatientService.GetAllAsync();
+        }
+        catch
+        {
+            errorMessage = "Error loading patients.";
+        }
+    }
+
+    private void ShowCreateForm()
+    {
+        newPatient = new PatientCreateDto();
+        isCreating = true;
+        errorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        isCreating = false;
+        newPatient = new PatientCreateDto();
+        errorMessage = null;
+    }
+
+    private async Task HandleCreate()
+    {
+        var success = await PatientService.CreateAsync(newPatient);
+        if (success)
+        {
+            await LoadPatients();
+            CancelEdit();
+        }
+        else
+        {
+            errorMessage = "Create failed. Check console/server logs.";
+        }
+    }
+
+    private async Task DeletePatient(int id)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Delete patient {id}?");
+        if (!confirmed) return;
+
+        var success = await PatientService.DeleteAsync(id);
+        if (success)
+            await LoadPatients();
+        else
+            errorMessage = "Delete failed. Check console/server logs.";
+    }
+
+    private void NavigateToDetails(int id)
+    {
+        Navigation.NavigateTo($"/patients/details/{id}");
+    }
+}
