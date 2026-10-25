@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPharmacy.Api", "src\MyPharmacy.Api\MyPharmacy.Api.csproj", "{094077BF-F8E6-4FF4-9849-D022DEC5C3EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyPharmacy.Client", "src\MyPharmacy.Client\MyPharmacy.Client.csproj", "{7634D9D1-3733-4CAF-98C0-C9EBBEA28A27}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{094077BF-F8E6-4FF4-9849-D022DEC5C3EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{094077BF-F8E6-4FF4-9849-D022DEC5C3EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{094077BF-F8E6-4FF4-9849-D022DEC5C3EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{094077BF-F8E6-4FF4-9849-D022DEC5C3EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7634D9D1-3733-4CAF-98C0-C9EBBEA28A27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7634D9D1-3733-4CAF-98C0-C9EBBEA28A27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7634D9D1-3733-4CAF-98C0-C9EBBEA28A27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7634D9D1-3733-4CAF-98C0-C9EBBEA28A27}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FD5F2A93-5AAA-46B9-B4C6-7F5BA7875326}
+	EndGlobalSection
+EndGlobal

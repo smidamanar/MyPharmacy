@@ -1,0 +1,33 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build solution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore MyPharmacy.sln
+
+      - name: Build solution
+        run: dotnet build MyPharmacy.sln --configuration Release --no-restore
+
+      - name: Run .NET tests
+        run: dotnet test MyPharmacy.sln --configuration Release --no-build --no-restore
